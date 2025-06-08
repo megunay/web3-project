@@ -11,7 +11,7 @@ plan:
         - contract-publish:
             contract-name: nftcg
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 7910
+            cost: 10820
             path: contracts/nftcg.clar
             anchor-block-only: true
             clarity-version: 3
