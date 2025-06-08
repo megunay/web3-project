@@ -1,8 +1,9 @@
 'use client';
-
-import { useEffect, useState } from 'react';
-import { showConnect } from '@stacks/connect';
+import { useState, useEffect } from 'react';
+import { showConnect, openContractCall } from '@stacks/connect';
 import { AppConfig, UserSession } from '@stacks/auth';
+import { StacksTestnet } from '@stacks/network';
+import { bufferCVFromString } from '@stacks/transactions';
 
 const appConfig = new AppConfig(['store_write', 'publish_data']);
 const userSession = new UserSession({ appConfig });
@@ -10,38 +11,60 @@ const userSession = new UserSession({ appConfig });
 export default function BuyPage() {
   const [walletAddress, setWalletAddress] = useState(null);
 
+  // Load wallet if already connected
   useEffect(() => {
-    // If already signed in
     if (userSession.isUserSignedIn()) {
       const userData = userSession.loadUserData();
-      const address = userData.profile.stxAddress?.mainnet || userData.profile.stxAddress?.testnet;
+      const address =
+        userData.profile.stxAddress?.testnet || userData.profile.stxAddress?.mainnet;
       setWalletAddress(address);
-    }
-
-    // If sign-in is pending
-    else if (userSession.isSignInPending()) {
-      userSession.handlePendingSignIn().then(() => {
-        const userData = userSession.loadUserData();
-        const address = userData.profile.stxAddress?.mainnet || userData.profile.stxAddress?.testnet;
-        setWalletAddress(address);
-      });
     }
   }, []);
 
   const connectWallet = () => {
+    const iconUrl =
+      typeof window !== 'undefined'
+        ? window.location.origin + '/logo.png'
+        : '/logo.png';
+
     showConnect({
       appDetails: {
         name: 'NFTcg',
-        icon: window.location.origin + '/logo.png',
+        icon: iconUrl,
       },
       userSession,
       onFinish: () => {
         const userData = userSession.loadUserData();
-        const address = userData.profile.stxAddress?.mainnet || userData.profile.stxAddress?.testnet;
+        const address =
+          userData.profile.stxAddress?.testnet || userData.profile.stxAddress?.mainnet;
         setWalletAddress(address);
       },
       onCancel: () => {
         console.log('User cancelled wallet connection');
+      },
+    });
+  };
+
+  const buyCardPack = async () => {
+    if (!walletAddress) return;
+
+    await openContractCall({
+      network: new StacksTestnet(),
+      anchorMode: 1, // 1 = Any (allows post conditions)
+      contractAddress: 'YOUR_CONTRACT_ADDRESS',
+      contractName: 'nftcg', // or whatever yours is
+      functionName: 'buy_pack', // replace with actual function
+      functionArgs: [], // or args if needed
+      appDetails: {
+        name: 'NFTcg',
+        icon: window.location.origin + '/logo.png',
+      },
+      onFinish: data => {
+        console.log('Transaction submitted!', data);
+        alert('Transaction sent! Check your wallet.');
+      },
+      onCancel: () => {
+        console.log('User canceled transaction.');
       },
     });
   };
@@ -58,10 +81,11 @@ export default function BuyPage() {
           Connect Wallet
         </button>
       ) : (
-        <p className="mb-4 text-green-400">Wallet Connected: {walletAddress}</p>
+        <p className="mb-4 text-green-400">Wallet: {walletAddress}</p>
       )}
 
       <button
+        onClick={buyCardPack}
         className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded"
         disabled={!walletAddress}
       >
